@@ -1,54 +1,59 @@
 <?php
 
-namespace App\Http\Controllers;
+    namespace App\Http\Controllers;
 
-use App\Models\Course;
-use App\Http\Requests\StoreCourseRequest;
-use App\Http\Requests\UpdateCourseRequest;
-use http\Env\Request;
-use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Contracts\View\Factory;
-use Illuminate\Contracts\View\View;
+    use App\Http\Requests\Course\DestroyRequest;
+    use App\Http\Requests\Course\StoreRequest;
+    use App\Http\Requests\Course\UpdateRequest;
+    use App\Models\Course;
 
-class CourseController extends Controller
-{
+    use http\Client\Request;
+    use Illuminate\Contracts\Foundation\Application;
+    use Illuminate\Contracts\View\Factory;
+    use Illuminate\Contracts\View\View;
 
-    public function index()
+    class CourseController extends Controller
     {
-        $data = Course::get();
 
-        return  view('course.index', data: [
-            'data' => $data,
-        ]);
-    }
+        public function index(\Illuminate\Http\Request $request)
+        {
+            $search = $request->get('q');
 
-    public function create()
-    {
-        return view('course.create');
-    }
+            $data = Course::query()->where('name', 'like', '%'.$search.'%')->paginate(2);
+            $data->appends(['q' => $search]);
+            return view('course.index', data: [
+                'data' => $data,
+                'search' => $search,
+            ]);
+        }
+
+        public function create()
+        {
+            return view('course.create');
+        }
 
 
-    public function store(\Illuminate\Http\Request $request)
-    {
-        $object = new Course();
+        public function store(StoreRequest $request)
+        {
+            $object = new Course();
 
 //        $object->name = $request->get('name');
-        $object->fill($request->except('_token'));
-        $object->save();
+            $object->fill($request->validated());
+            $object->save();
 
-        return redirect()->route('course.index');
-    }
+            return redirect()->route('course.index');
+        }
 
 
-    public function edit(Course $course)
-    {
-        return view('course.edit', data: [
-           'each' => $course,
-        ]);
-    }
+        public function edit(Course $course)
+        {
+            return view('course.edit', data: [
+                'each' => $course,
+            ]);
+        }
 
-    public function update(\Illuminate\Http\Request $request, Course $course)
-    {
+        public function update(UpdateRequest $request, Course $course)
+        {
 //        Course::where('id', $course->id )->update(
 //            $request->except([
 //                '_token',
@@ -56,20 +61,22 @@ class CourseController extends Controller
 //            ])
 //        );
 
-        $course->update(
-            $request->except([
-                '_token',
-                '_method',
-            ])
-        );
+            $course->update(
+                $request->except([
+                    '_token',
+                    '_method',
+                ])
+            );
 
+            return redirect()->route('course.index');
+
+        }
+
+        public function destroy(DestroyRequest $request, $course)
+        {
+            Course::destroy($course);
+//            $course->delete();
+
+            return redirect()->route('course.index');
+        }
     }
-
-    public function destroy(Course $course)
-    {
-//        Course::destroy($course);
-        $course->delete();
-
-        return redirect()->route('course.index');
-    }
-}
